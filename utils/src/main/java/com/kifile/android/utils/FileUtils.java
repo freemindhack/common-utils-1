@@ -14,7 +14,6 @@ public class FileUtils {
      * 保证文件存在，不存在则创建.
      *
      * @param path
-     *
      * @throws IOException
      */
     public static File ensureFileExist(String path) throws IOException {
@@ -44,7 +43,6 @@ public class FileUtils {
      * 删除该目录下所有文件，
      *
      * @param delpath
-     *
      * @return
      */
     public static boolean delete(String delpath) {
@@ -55,7 +53,6 @@ public class FileUtils {
      * 删除该目录下所有文件，
      *
      * @param file
-     *
      * @return
      */
     public static boolean delete(File file) {
@@ -79,5 +76,10 @@ public class FileUtils {
             file.renameTo(newFile);
             return newFile.delete();
         }
+    }
+
+    public static void renameFile(String oldPath, String newPath) {
+        File oldFile = new File(oldPath);
+        oldFile.renameTo(new File(newPath));
     }
 }

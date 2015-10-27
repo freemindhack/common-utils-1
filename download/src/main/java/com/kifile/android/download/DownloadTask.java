@@ -16,6 +16,8 @@ import java.io.InputStream;
  */
 public class DownloadTask implements Runnable {
 
+    private static final String PREFIX = ".tmp";
+
     private DownloadState mState;
 
     private Callback mCallback;
@@ -44,8 +46,11 @@ public class DownloadTask implements Runnable {
                     byte[] buffer = new byte[1024 * 4];
                     long download = 0;
                     int bufferSize;
-                    FileUtils.ensureFileExist(mState.path);
-                    stream = new FileOutputStream(mState.path);
+                    String path = mState.path;
+                    String tmpPath = path + PREFIX;
+                    // 使用临时文件进行下载,防止下载中出错,导致文件无法正常读取.
+                    FileUtils.ensureFileExist(tmpPath);
+                    stream = new FileOutputStream(tmpPath);
                     while (mState.status != DownloadState.STATUS_CANCELED) {
                         if ((bufferSize = inputstream.read(buffer)) != -1) {
                             if (length != -1) {
@@ -60,11 +65,15 @@ public class DownloadTask implements Runnable {
                             }
                             stream.write(buffer, 0, bufferSize);
                         } else {
+                            FileUtils.renameFile(tmpPath, path);
                             mState.status = DownloadState.STATUS_SUCCESS;
                             mState.percent = 100;
                             mCallback.callback(mState);
                             break;
                         }
+                    }
+                    if (mState.startId != DownloadState.STATUS_SUCCESS) {
+                        FileUtils.delete(tmpPath);
                     }
                 }
             } catch (IOException e) {
