@@ -4,14 +4,15 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import com.kifile.android.utils.ViewUtils;
 
 /**
  * 界面加载管理器.
- * <p/>
+ * <p>
  * 负责管理各个界面状态的切换.
- * <p/>
+ * <p>
  * Created by kifile on 15/10/27.
  */
 public class ViewLoaderManager {
@@ -49,8 +50,8 @@ public class ViewLoaderManager {
         setStatus(STATUS_INVALIDATE);
     }
 
-    public View inflate(int resource, ViewGroup parent) {
-        mView = (ViewGroup) LayoutInflater.from(mContext).inflate(resource, parent, false);
+    public View inflate() {
+        mView = new FrameLayout(mContext);
         mLoadingView = null;
         mPrimaryView = null;
         mErrorView = null;
