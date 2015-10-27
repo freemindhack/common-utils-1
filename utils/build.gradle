@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven'
+apply plugin: 'signing'
 
 android {
     compileSdkVersion 23
@@ -23,3 +25,59 @@ dependencies {
     compile 'com.squareup.okhttp:okhttp:2.5.0'
     compile 'com.android.support:support-v4:23.0.1'
 }
+
+
+signing {
+    sign configurations.archives
+}
+
+group = 'com.kifile.android.utils'
+archivesBaseName = 'utils'
+version = 'beta'
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment {
+                MavenDeployment deployment -> signing.signPom(deployment);
+            }
+
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name 'utils'
+                packaging 'aar'
+                description 'A collection of android common utils.'
+                url 'https://github.com/kifile/common-utils'
+
+                scm {
+                    connection 'scm:git:https://github.com/kifile/common-utils.git'
+                    developerConnection 'scm:git:https://github.com/kifile/common-utils.git'
+                    url 'https://github.com/kifile/common-utils.git'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'kifile'
+                        name 'Kifile Chou'
+                        email 'kifile@kifile.com'
+                    }
+                }
+            }
+        }
+    }
+}
+
