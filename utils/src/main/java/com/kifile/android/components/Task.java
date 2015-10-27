@@ -19,7 +19,7 @@ public abstract class Task<SUCCESS, FAIL> implements Runnable {
     }
 
     public Task(TaskCallback<SUCCESS, FAIL> callback) {
-        this(null, callback)
+        this(null, callback);
     }
 
     /**
