@@ -15,3 +15,8 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+-keep @com.kifile.android.annotations.NoProguard class *
+-keepclassmembers class * {
+    @com.kifile.android.annotations.NoProguard *;
+}

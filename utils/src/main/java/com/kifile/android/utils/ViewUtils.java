@@ -4,26 +4,37 @@ import android.view.View;
 import android.view.ViewGroup;
 
 /**
- * View相关工具类.
- * <p/>
- * Created by kifile on 15/10/27.
+ * View涉及的工具类.
+ *
+ * @author kifile
  */
 public class ViewUtils {
 
+    /**
+     * 清理view，保证没有包含在ViewGroup内
+     *
+     * @param view
+     */
     public static void clearParent(View view) {
         if (view.getParent() instanceof ViewGroup) {
             ((ViewGroup) view.getParent()).removeView(view);
         }
     }
 
-    public static void addSingleView(ViewGroup container, View child) {
-        if (container == null || child == null) {
-            throw new NullPointerException("Container or child cannot be null.");
+    /**
+     * 添加单个View到ViewGroup中.
+     *
+     * @param parent
+     * @param child
+     */
+    public static void addSingleViewToGroup(ViewGroup parent, View child) {
+        if (parent == null || child == null) {
+            return;
         }
-        if (container.getChildCount() != 1 || container.getChildAt(0) != child) {
-            container.removeAllViews();
+        if (!(parent.getChildCount() == 1 && (parent.getChildAt(0)) == child)) {
+            parent.removeAllViews();
             clearParent(child);
-            container.addView(child);
+            parent.addView(child);
         }
     }
 }

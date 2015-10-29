@@ -10,22 +10,22 @@ import com.kifile.android.utils.ViewUtils;
 
 /**
  * 界面加载管理器.
- * <p>
+ * <p/>
  * 负责管理各个界面状态的切换.
- * <p>
+ * <p/>
  * Created by kifile on 15/10/27.
  */
 public class ViewLoaderManager {
 
     // 界面状态类型.
     // 未定义状态
-    protected static final int STATUS_INVALIDATE = -1;
+    public static final int STATUS_INVALIDATE = -1;
     // 加载状态
-    protected static final int STATUS_LOADING = 0;
+    public static final int STATUS_LOADING = 0;
     // 加载成功状态
-    protected static final int STATUS_PRIMARY = 1;
+    public static final int STATUS_PRIMARY = 1;
     // 加载失败状态
-    protected static final int STATUS_ERROR = 2;
+    public static final int STATUS_ERROR = 2;
 
     private ViewGroup mView;
 
@@ -47,7 +47,6 @@ public class ViewLoaderManager {
             throw new NullPointerException("callback cannot be null.");
         }
         mCallback = callback;
-        setStatus(STATUS_INVALIDATE);
     }
 
     public View inflate() {
@@ -55,6 +54,7 @@ public class ViewLoaderManager {
         mLoadingView = null;
         mPrimaryView = null;
         mErrorView = null;
+        setStatus(STATUS_LOADING);
         return mView;
     }
 
@@ -97,7 +97,7 @@ public class ViewLoaderManager {
             mLoadingView = mCallback.getLoadingView(LayoutInflater.from(mContext), mView);
         }
         mLoadingView.setVisibility(View.VISIBLE);
-        ViewUtils.addSingleView(mView, mPrimaryView);
+        ViewUtils.addSingleViewToGroup(mView, mLoadingView);
     }
 
     /**
@@ -108,7 +108,7 @@ public class ViewLoaderManager {
             mPrimaryView = mCallback.getPrimaryView(LayoutInflater.from(mContext), mView);
         }
         mPrimaryView.setVisibility(View.VISIBLE);
-        ViewUtils.addSingleView(mView, mPrimaryView);
+        ViewUtils.addSingleViewToGroup(mView, mPrimaryView);
     }
 
     /**
@@ -119,7 +119,7 @@ public class ViewLoaderManager {
             mErrorView = mCallback.getErrorView(LayoutInflater.from(mContext), mView);
         }
         mErrorView.setVisibility(View.VISIBLE);
-        ViewUtils.addSingleView(mView, mErrorView);
+        ViewUtils.addSingleViewToGroup(mView, mErrorView);
     }
 
     public interface Callback {
