@@ -7,25 +7,25 @@ import android.os.Handler;
  * <p/>
  * Created by kifile on 15/10/23.
  */
-public abstract class Task<SUCCESS, FAIL> implements Runnable {
+public abstract class Task<SUCCESS, PROCESS, FAIL> implements Runnable {
 
     private final Handler mHandler;
 
-    private final TaskCallback<SUCCESS, FAIL> mCallback;
+    private final TaskCallback<SUCCESS, PROCESS, FAIL> mCallback;
 
-    public Task(Handler handler, TaskCallback<SUCCESS, FAIL> callback) {
+    public Task(Handler handler, TaskCallback<SUCCESS, PROCESS, FAIL> callback) {
         mHandler = handler == null ? new Handler() : handler;
         mCallback = callback;
     }
 
-    public Task(TaskCallback<SUCCESS, FAIL> callback) {
+    public Task(TaskCallback<SUCCESS, PROCESS, FAIL> callback) {
         this(null, callback);
     }
 
     /**
-     * 在Ui线程上执行成功操作.
+     * 在指定线程上执行成功操作.
      */
-    public void onSuccess(final SUCCESS success) {
+    public void performSuccess(final SUCCESS success) {
         if (mCallback != null) {
             mHandler.post(new Runnable() {
                 @Override
@@ -37,9 +37,9 @@ public abstract class Task<SUCCESS, FAIL> implements Runnable {
     }
 
     /**
-     * 在Ui线程上执行失败操作.
+     * 在指定线程上执行失败操作.
      */
-    public void onFail(final FAIL fail) {
+    public void performFail(final FAIL fail) {
         if (mCallback != null) {
             mHandler.post(new Runnable() {
                 @Override
@@ -48,13 +48,28 @@ public abstract class Task<SUCCESS, FAIL> implements Runnable {
                 }
             });
         }
+    }
 
+    /**
+     * 在指定线程上执行数据更新操作.
+     *
+     * @param process
+     */
+    public void performProcessChanged(final PROCESS process) {
+        if (mCallback != null) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mCallback.onTaskProcessChanged(process);
+                }
+            });
+        }
     }
 
     /**
      * 任务回调接口.
      */
-    public interface TaskCallback<SUCCESS, FAIL> {
+    public interface TaskCallback<SUCCESS, PROCESS, FAIL> {
 
         /**
          * 任务成功.
@@ -65,6 +80,13 @@ public abstract class Task<SUCCESS, FAIL> implements Runnable {
          * 任务失败.
          */
         void onTaskFail(FAIL fail);
+
+        /**
+         * 任务进度更新.
+         *
+         * @param process
+         */
+        void onTaskProcessChanged(PROCESS process);
 
     }
 

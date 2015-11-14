@@ -1,5 +1,6 @@
 package com.kifile.android.download;
 
+import com.kifile.android.components.Task;
 import com.kifile.android.utils.FileUtils;
 import com.kifile.android.utils.HttpUtils;
 import com.squareup.okhttp.Request;
@@ -14,17 +15,16 @@ import java.io.InputStream;
  *
  * @author kifile
  */
-public class DownloadTask implements Runnable {
+public class DownloadTask extends Task<DownloadState, DownloadState, DownloadState> {
 
-    private static final String PREFIX = ".tmp";
+    private static final String SUFFIX = ".tmp";
 
     private DownloadState mState;
 
-    private Callback mCallback;
-
-    public DownloadTask(DownloadState state, Callback callback) {
+    public DownloadTask(DownloadState state, TaskCallback<DownloadState, DownloadState,
+            DownloadState> callback) {
+        super(callback);
         mState = state;
-        mCallback = callback;
     }
 
     @Override
@@ -32,8 +32,8 @@ public class DownloadTask implements Runnable {
         if (mState.status != DownloadState.STATUS_CANCELED) {
             mState.status = DownloadState.STATUS_DOWNLOADING;
             mState.percent = 0;
-            mCallback.callback(mState);
-            double percent = 0;
+            performProcessChanged(mState);
+            double percent;
             InputStream inputstream = null;
             FileOutputStream stream = null;
             try {
@@ -47,7 +47,7 @@ public class DownloadTask implements Runnable {
                     long download = 0;
                     int bufferSize;
                     String path = mState.path;
-                    String tmpPath = path + PREFIX;
+                    String tmpPath = path + SUFFIX;
                     // 使用临时文件进行下载,防止下载中出错,导致文件无法正常读取.
                     FileUtils.ensureFileExist(tmpPath);
                     stream = new FileOutputStream(tmpPath);
@@ -61,14 +61,14 @@ public class DownloadTask implements Runnable {
                             }
                             if (mState.percent != percent) {
                                 mState.percent = percent;
-                                mCallback.callback(mState);
+                                performProcessChanged(mState);
                             }
                             stream.write(buffer, 0, bufferSize);
                         } else {
                             FileUtils.renameFile(tmpPath, path);
                             mState.status = DownloadState.STATUS_SUCCESS;
                             mState.percent = 100;
-                            mCallback.callback(mState);
+                            performProcessChanged(mState);
                             break;
                         }
                     }
@@ -76,11 +76,7 @@ public class DownloadTask implements Runnable {
                         FileUtils.delete(tmpPath);
                     }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-                mState.status = DownloadState.STATUS_FAILED;
-            } catch (IllegalStateException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
                 mState.status = DownloadState.STATUS_FAILED;
             } finally {
                 if (inputstream != null) {
@@ -100,13 +96,12 @@ public class DownloadTask implements Runnable {
             }
             if (mState.status != DownloadState.STATUS_SUCCESS) {
                 mState.status = DownloadState.STATUS_FAILED;
-                mCallback.callback(mState);
+                performFail(mState);
+            } else {
+                performSuccess(mState);
             }
         }
 
     }
 
-    public interface Callback {
-        void callback(DownloadState state);
-    }
 }

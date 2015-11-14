@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.text.TextUtils;
 
+import com.kifile.android.components.Task;
 import com.kifile.android.utils.WorkerThreadPool;
 
 import java.util.ArrayList;
@@ -17,7 +18,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author kifile
  */
-public class DownloadService extends Service implements DownloadTask.Callback {
+public class DownloadService extends Service implements Task.TaskCallback<DownloadState,
+        DownloadState, DownloadState> {
 
     public static final String EXTRA_LINK = "extra_link";
     public static final String EXTRA_PATH = "extra_path";
@@ -81,13 +83,13 @@ public class DownloadService extends Service implements DownloadTask.Callback {
         if (TextUtils.isEmpty(link)) {
             state.status = DownloadState.STATUS_CANCELED;
             state.error = DownloadState.ERROR_NO_LINK;
-            callback(state);
+            handleDownloadState(state);
             return START_NOT_STICKY;
         }
         if (TextUtils.isEmpty(path)) {
             state.status = DownloadState.STATUS_CANCELED;
             state.error = DownloadState.ERROR_NO_PATH;
-            callback(state);
+            handleDownloadState(state);
             return START_NOT_STICKY;
         }
         int action = intent.getIntExtra(EXTRA_ACTION, ACTION_DOWNLOAD);
@@ -103,7 +105,7 @@ public class DownloadService extends Service implements DownloadTask.Callback {
             if (mTaskMap.contains(state)) {
                 state.status = DownloadState.STATUS_FAILED;
                 state.error = DownloadState.ERROR_ALREADY_EXIST;
-                callback(state);
+                handleDownloadState(state);
             } else {
                 DownloadTask task = new DownloadTask(state, this);
                 WorkerThreadPool.getInstance().execute(task, priority);
@@ -125,7 +127,7 @@ public class DownloadService extends Service implements DownloadTask.Callback {
         DownloadState state = getStateByLinkAndPath(link, path);
         if (state != null) {
             state.status = DownloadState.STATUS_CANCELED;
-            callback(state);
+            handleDownloadState(state);
         }
     }
 
@@ -150,7 +152,21 @@ public class DownloadService extends Service implements DownloadTask.Callback {
     }
 
     @Override
-    public void callback(DownloadState state) {
+    public void onTaskSuccess(DownloadState state) {
+        handleDownloadState(state);
+    }
+
+    @Override
+    public void onTaskFail(DownloadState state) {
+        handleDownloadState(state);
+    }
+
+    @Override
+    public void onTaskProcessChanged(DownloadState state) {
+        handleDownloadState(state);
+    }
+
+    private void handleDownloadState(DownloadState state) {
         Intent intent = new Intent(DownloadStatusReceiver.ACTION);
         intent.setPackage(getPackageName());
         intent.putExtra(DownloadStatusReceiver.EXTRA_TASK, state);
