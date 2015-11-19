@@ -2,7 +2,6 @@ package com.kifile.android.download;
 
 import com.kifile.android.components.Task;
 import com.kifile.android.utils.FileUtils;
-import com.kifile.android.utils.HttpUtils;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
