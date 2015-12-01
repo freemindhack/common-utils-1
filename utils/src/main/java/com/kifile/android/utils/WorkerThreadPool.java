@@ -1,6 +1,9 @@
 package com.kifile.android.utils;
 
-import java.util.concurrent.ExecutorService;
+import android.support.annotation.NonNull;
+
+import java.util.Comparator;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -11,86 +14,58 @@ import java.util.concurrent.TimeUnit;
  * <p/>
  * Created by zhouyi on 15/5/14.
  */
-public class WorkerThreadPool {
-
-    private static final int PRIORITY_HIGH = 10;
-    private static final int PRIORITY_NORMAL = 5;
+public class WorkerThreadPool implements Executor {
 
     private static final int THREAD_NUM = Runtime.getRuntime().availableProcessors();
 
     private static final WorkerThreadPool sInstance = new WorkerThreadPool();
 
-    private ExecutorService mThreadPool;
+    private final Executor mExecutor;
 
     private WorkerThreadPool() {
-        mThreadPool = new ThreadPoolExecutor(THREAD_NUM, THREAD_NUM, 0L, TimeUnit.MILLISECONDS,
-                new PriorityBlockingQueue<Runnable>(), Executors.defaultThreadFactory());
+        mExecutor = new ThreadPoolExecutor(THREAD_NUM, THREAD_NUM, 0L, TimeUnit.MILLISECONDS,
+                new PriorityBlockingQueue<>(THREAD_NUM, new PriorityRunnableComparator()), Executors.defaultThreadFactory());
     }
 
     public static WorkerThreadPool getInstance() {
         return sInstance;
     }
 
-    public WorkerRunnable execute(Runnable runnable) {
-        return execute(runnable, false);
-    }
-
-    public WorkerRunnable execute(Runnable runnable, boolean priority) {
-        WorkerRunnable workerRunnable;
-        if (!(runnable instanceof WorkerRunnable)) {
-            workerRunnable = new WorkerRunnable(runnable, priority ? PRIORITY_HIGH : PRIORITY_NORMAL);
-        } else {
-            workerRunnable = (WorkerRunnable) runnable;
-        }
-        mThreadPool.execute(workerRunnable);
-        return workerRunnable;
+    @Override
+    public void execute(@NonNull Runnable command) {
+        mExecutor.execute(command);
     }
 
     /**
-     * 可取消的Runnable，用于涉及到需要取消的任务.
+     * 拥有优先级的Runnable对象.
      */
-    public static class WorkerRunnable implements Runnable, Comparable<WorkerRunnable> {
-
-        private int mPriority;
-
-        private boolean mCanceled;
-        private boolean mFinished;
-
-        private Runnable mRunnable;
-
-        public WorkerRunnable(Runnable runnable, int priority) {
-            mRunnable = runnable;
-            mPriority = priority;
-        }
+    public interface PriorityRunnable extends Runnable {
 
         /**
-         * 取消任务执行
+         * 获取当前的优先级.
+         *
+         * @return
          */
-        public void cancel() {
-            mCanceled = true;
-        }
+        int getPriority();
+    }
 
-        public boolean isCanceled() {
-            return mCanceled;
-        }
-
-        public boolean isFinished() {
-            return mFinished;
-        }
+    /**
+     * 任务优先级计算工具类.
+     */
+    public class PriorityRunnableComparator implements Comparator<Runnable> {
 
         @Override
-        public final void run() {
-            if (!isCanceled()) {
-                if (mRunnable != null) {
-                    mRunnable.run();
-                }
+        public int compare(Runnable lhs, Runnable rhs) {
+            int lPriority = 0;
+            int rPriority = 0;
+            if (lhs instanceof PriorityRunnable) {
+                lPriority = ((PriorityRunnable) lhs).getPriority();
             }
-            mFinished = true;
-        }
-
-        @Override
-        public int compareTo(WorkerRunnable another) {
-            return another != null && mPriority < another.mPriority ? 1 : -1;
+            if (rhs instanceof PriorityRunnable) {
+                rPriority = ((PriorityRunnable) rhs).getPriority();
+            }
+            return rPriority - lPriority;
         }
     }
+
 }

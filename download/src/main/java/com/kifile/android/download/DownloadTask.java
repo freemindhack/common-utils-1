@@ -1,43 +1,64 @@
 package com.kifile.android.download;
 
-import com.kifile.android.components.Task;
+import android.os.AsyncTask;
+
 import com.kifile.android.utils.FileUtils;
+import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 下载任务.
  *
  * @author kifile
  */
-public class DownloadTask extends Task<DownloadState, DownloadState, DownloadState> {
+public class DownloadTask extends AsyncTask<Void, DownloadState, DownloadState> {
 
     private static final String SUFFIX = ".tmp";
 
+    private static OkHttpClient HTTP_CLIENT;
+
     private DownloadState mState;
 
-    public DownloadTask(DownloadState state, TaskCallback<DownloadState, DownloadState,
-            DownloadState> callback) {
-        super(callback);
+    public DownloadTask(DownloadState state) {
         mState = state;
     }
 
+    public static void setOkHttpClient(OkHttpClient client) {
+        HTTP_CLIENT = client;
+    }
+
+    private void initClientIfNeeded() {
+        if (HTTP_CLIENT == null) {
+            synchronized (DownloadTask.class) {
+                if (HTTP_CLIENT == null) {
+                    HTTP_CLIENT = new OkHttpClient();
+                    HTTP_CLIENT.setConnectTimeout(5, TimeUnit.SECONDS);
+                    HTTP_CLIENT.setReadTimeout(5, TimeUnit.SECONDS);
+                    HTTP_CLIENT.setWriteTimeout(5, TimeUnit.SECONDS);
+                }
+            }
+        }
+    }
+
     @Override
-    public void run() {
+    protected DownloadState doInBackground(Void... params) {
         if (mState.status != DownloadState.STATUS_CANCELED) {
             mState.status = DownloadState.STATUS_DOWNLOADING;
             mState.percent = 0;
-            performProcessChanged(mState);
+            publishProgress(mState);
             double percent;
             InputStream inputstream = null;
             FileOutputStream stream = null;
+            initClientIfNeeded();
             try {
                 Request request = new Request.Builder().url(mState.link).build();
-                Response response = HttpUtils.getResponse(request);
+                Response response = HTTP_CLIENT.newCall(request).execute();
                 if (response.isSuccessful()) {
                     // 链接成功开始下载
                     long length = response.body().contentLength();
@@ -50,7 +71,7 @@ public class DownloadTask extends Task<DownloadState, DownloadState, DownloadSta
                     // 使用临时文件进行下载,防止下载中出错,导致文件无法正常读取.
                     FileUtils.ensureFileExist(tmpPath);
                     stream = new FileOutputStream(tmpPath);
-                    while (mState.status != DownloadState.STATUS_CANCELED) {
+                    while (mState.status != DownloadState.STATUS_CANCELED && !isCancelled()) {
                         if ((bufferSize = inputstream.read(buffer)) != -1) {
                             if (length != -1) {
                                 download += bufferSize;
@@ -60,14 +81,14 @@ public class DownloadTask extends Task<DownloadState, DownloadState, DownloadSta
                             }
                             if (mState.percent != percent) {
                                 mState.percent = percent;
-                                performProcessChanged(mState);
+                                publishProgress(mState);
                             }
                             stream.write(buffer, 0, bufferSize);
                         } else {
                             FileUtils.renameFile(tmpPath, path);
                             mState.status = DownloadState.STATUS_SUCCESS;
                             mState.percent = 100;
-                            performProcessChanged(mState);
+                            publishProgress(mState);
                             break;
                         }
                     }
@@ -95,12 +116,8 @@ public class DownloadTask extends Task<DownloadState, DownloadState, DownloadSta
             }
             if (mState.status != DownloadState.STATUS_SUCCESS) {
                 mState.status = DownloadState.STATUS_FAILED;
-                performFail(mState);
-            } else {
-                performSuccess(mState);
             }
         }
-
+        return mState;
     }
-
 }

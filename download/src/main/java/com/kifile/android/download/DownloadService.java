@@ -6,7 +6,6 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.text.TextUtils;
 
-import com.kifile.android.components.Task;
 import com.kifile.android.utils.WorkerThreadPool;
 
 import java.util.ArrayList;
@@ -18,8 +17,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author kifile
  */
-public class DownloadService extends Service implements Task.TaskCallback<DownloadState,
-        DownloadState, DownloadState> {
+public class DownloadService extends Service {
 
     public static final String EXTRA_LINK = "extra_link";
     public static final String EXTRA_PATH = "extra_path";
@@ -28,8 +26,6 @@ public class DownloadService extends Service implements Task.TaskCallback<Downlo
     public static final int ACTION_CANCEL = 1; // 取消下载
 
     public static final String EXTRA_ACTION = "extra_action";
-
-    public static final String EXTRA_TYPE = "extra_type";
 
     private final ReentrantReadWriteLock mLock = new ReentrantReadWriteLock();
 
@@ -99,7 +95,6 @@ public class DownloadService extends Service implements Task.TaskCallback<Downlo
         }
         state.status = DownloadState.STATUS_PENDING;
         state.startId = startId;
-        boolean priority = intent.getBooleanExtra(EXTRA_TYPE, false);
         mLock.writeLock().lock();
         try {
             if (mTaskMap.contains(state)) {
@@ -107,8 +102,27 @@ public class DownloadService extends Service implements Task.TaskCallback<Downlo
                 state.error = DownloadState.ERROR_ALREADY_EXIST;
                 handleDownloadState(state);
             } else {
-                DownloadTask task = new DownloadTask(state, this);
-                WorkerThreadPool.getInstance().execute(task, priority);
+                DownloadTask task = new DownloadTask(state) {
+                    @Override
+                    protected void onPostExecute(DownloadState downloadState) {
+                        super.onPostExecute(downloadState);
+                        handleDownloadState(downloadState);
+                    }
+
+                    @Override
+                    protected void onCancelled() {
+                        super.onCancelled();
+                    }
+
+                    @Override
+                    protected void onProgressUpdate(DownloadState... values) {
+                        super.onProgressUpdate(values);
+                        if (values != null && values.length == 1) {
+                            handleDownloadState(values[0]);
+                        }
+                    }
+                };
+                task.executeOnExecutor(WorkerThreadPool.getInstance());
                 mTaskMap.add(state);
             }
         } finally {
@@ -149,21 +163,6 @@ public class DownloadService extends Service implements Task.TaskCallback<Downlo
     @Override
     public IBinder onBind(Intent intent) {
         return mStub;
-    }
-
-    @Override
-    public void onTaskSuccess(DownloadState state) {
-        handleDownloadState(state);
-    }
-
-    @Override
-    public void onTaskFail(DownloadState state) {
-        handleDownloadState(state);
-    }
-
-    @Override
-    public void onTaskProcessChanged(DownloadState state) {
-        handleDownloadState(state);
     }
 
     private void handleDownloadState(DownloadState state) {
